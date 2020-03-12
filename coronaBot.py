@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import requests
 import time
 import re
@@ -15,14 +17,12 @@ def getNumber():
     return int(re.findall(pattern,str(allH2))[1])
 
 telegramToken = config('token')
-
-bot = Bot(token=telegramToken)
-
-oldNumber = 0
 chatid = -352217135
+bot = Bot(token=telegramToken)
+oldNumber = 0
 
 while True:
-    if datetime.now().hour > 11 and datetime.now().hour < 17:
+    if datetime.now().hour > 11 and datetime.now().hour < 16:
         number = getNumber()
         if (number != oldNumber):
             oldNumber = number
