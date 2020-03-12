@@ -1,0 +1,39 @@
+import requests
+import time
+import re
+from telegram import Bot
+from bs4 import BeautifulSoup
+from datetime import datetime
+from decouple import config
+
+def getNumber():
+    url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    allH2 = soup.findAll('td')[1]
+    pattern = r'\d+'
+    return int(re.findall(pattern,str(allH2))[1])
+
+telegramToken = config('token')
+
+bot = Bot(token=telegramToken)
+
+oldNumber = 0
+chatid = -352217135
+
+while True:
+    if datetime.now().hour > 11 and datetime.now().hour < 17:
+        number = getNumber()
+        if (number != oldNumber):
+            oldNumber = number
+            print('Number changed!')
+            bot.sendMessage(chat_id=chatid, text=f'New Number: {number}')
+            bot.setChatTitle(chat_id=chatid, title=f'Corona Updates - {number}')
+        else:
+            print('Number not changed')
+    else:
+        print('Will only run between 12 and 3pm')
+
+    time.sleep(60)
+
+
