@@ -22,18 +22,17 @@ bot = Bot(token=telegramToken)
 oldNumber = 0
 
 while True:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if datetime.now().hour > 11 and datetime.now().hour < 16:
         number = getNumber()
         if (number != oldNumber):
             oldNumber = number
-            print('Number changed!')
+            print(f'{now}: Number changed!')
             bot.sendMessage(chat_id=chatid, text=f'New Number: {number}')
             bot.setChatTitle(chat_id=chatid, title=f'Corona Updates - {number}')
         else:
-            print('Number not changed')
+            print(f'{now}: Number not changed')
     else:
-        print('Will only run between 12 and 3pm')
+        print(f'{now}: Will only run between 12 and 3pm')
 
     time.sleep(60)
-
-
