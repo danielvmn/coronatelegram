@@ -30,6 +30,10 @@ def bot_listen():
     help_handler = CommandHandler('help', help)
     dispatcher.add_handler(help_handler)
 
+    # Handler for '/total'
+    total_handler = CommandHandler('total', total)
+    dispatcher.add_handler(total_handler)
+
     # The handler will call the gemeente method if the /gemeente command is called
     gemeente_handler = CommandHandler('gemeente', gemeente)
     dispatcher.add_handler(gemeente_handler)
@@ -45,7 +49,14 @@ def gemeente(update, context):
 
 def help(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
-    context.bot.sendMessage(chat_id=update.effective_chat.id, text="Gebruik: /gemeente <naam>\nbijv: /gemeente Amsterdam")
+    context.bot.sendMessage(chat_id=update.effective_chat.id,
+        text="Gebruik: _/gemeente <naam>_\nbijv: _/gemeente Amsterdam_\n\n_/total_ voor totals",
+        parse_mode = "Markdown")
+
+def total(update, context):
+    logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+    totalText = f'Total positief getest: {getTotal()}'
+    context.bot.sendMessage(chat_id=update.effective_chat.id, text=totalText)
 
 # Scraps the CSV data from RIVM
 def getGemeente(gemeente):
@@ -61,7 +72,7 @@ def getGemeente(gemeente):
     return f'kan gemeente {gemeente} niet vinden'
 
 # Scaps the total number of infected from RIVM
-def getNumber():
+def getTotal():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -80,7 +91,7 @@ oldNumber = 0
 while True:
     # The updates are usually done at around 14:00, so we only poll around that time.
     if datetime.now().hour > 11 and datetime.now().hour < 16:
-        number = getNumber()
+        number = getTotal()
         if (number != oldNumber):
             oldNumber = number
             logging.info('Number changed!')
