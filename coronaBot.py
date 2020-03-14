@@ -18,24 +18,34 @@ telegramToken = config('token')
 chatid = config('chat')
 
 # Logging setup
-format = '%(message)s'
-logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+format = '%(asctime)-15s %(message)s'
+logging.basicConfig(format=format, level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
 # Starts Bot listener to reply to /commands
 def bot_listen():
     updater = Updater(token=telegramToken, use_context=True)
     dispatcher = updater.dispatcher
+
+    # Handler for '/help'
+    help_handler = CommandHandler('help', help)
+    dispatcher.add_handler(help_handler)
+
     # The handler will call the gemeente method if the /gemeente command is called
     gemeente_handler = CommandHandler('gemeente', gemeente)
     dispatcher.add_handler(gemeente_handler)
+
     # Starts polling for commands
     updater.start_polling()
 
 def gemeente(update, context):
-    logging.info(f'Replying command "{update.message.text}".')
+    logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
     # Extracts the string after '/gemeente' to retrieve the gemeente to search for
     gemeente = update.message.text.replace("/gemeente","")
     context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
+
+def help(update, context):
+    logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+    context.bot.sendMessage(chat_id=update.effective_chat.id, text="Gebruik: /gemeente <naam>\nbijv: /gemeente Amsterdam")
 
 # Scraps the CSV data from RIVM
 def getGemeente(gemeente):
@@ -47,7 +57,7 @@ def getGemeente(gemeente):
     csvReader = csv.reader(csvFile, delimiter=';')
     for line in csvReader:
         if line and line[0].casefold() == gemeente.casefold():
-            return f'{gemeente} heeft er {line[2]} besmet'
+            return f'{gemeente} heeft er {line[2]} positief getest'
     return f'kan gemeente {gemeente} niet vinden'
 
 # Scaps the total number of infected from RIVM
@@ -67,7 +77,6 @@ listener.start()
 bot = Bot(token=telegramToken)
 
 oldNumber = 0
-
 while True:
     # The updates are usually done at around 14:00, so we only poll around that time.
     if datetime.now().hour > 11 and datetime.now().hour < 16:
@@ -80,7 +89,7 @@ while True:
         else:
             logging.info('Number not changed')
     else:
-        logging.info('Will only run between 12h and 15h')
+        logging.info('Will only run between 11h and 16h')
 
     # We don't need to look for new data every moment, so it will poll every 60 seconds
     time.sleep(60)
