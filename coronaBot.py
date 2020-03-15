@@ -6,6 +6,7 @@ import re
 import logging
 import threading
 import csv
+import pathlib
 from io import StringIO
 from telegram import Bot
 from bs4 import BeautifulSoup
@@ -19,7 +20,7 @@ chatid = config('chat')
 
 # Logging setup
 format = '%(asctime)-15s %(message)s'
-logging.basicConfig(format=format, level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
+logging.basicConfig(format=format, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
 # Starts Bot listener to reply to /commands
 def bot_listen():
@@ -44,13 +45,13 @@ def bot_listen():
 def gemeente(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
     # Extracts the string after '/gemeente' to retrieve the gemeente to search for
-    gemeente = update.message.text.replace("/gemeente","")
+    gemeente = update.message.text.replace('/gemeente','')
     context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
 
 def help(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
     context.bot.sendMessage(chat_id=update.effective_chat.id,
-        text="Gebruik: _/gemeente <naam>_\nbijv: _/gemeente Amsterdam_\n\n_/total_ voor totals",
+        text='Gebruik: _/gemeente <naam>_\nbijv: _/gemeente Amsterdam_\n\n_/total_ voor totals',
         parse_mode = "Markdown")
 
 def total(update, context):
@@ -80,6 +81,19 @@ def getTotal():
     pattern = r'\d+'
     return int(re.findall(pattern,str(allH2))[1])
 
+# Saves current totals to a file
+def writeToFile(number):
+    with open('number.txt', 'w+') as totalsFile:
+        totalsFile.write(str(number))
+
+# Reads from the file to check if the number changed
+def ReadFromFile():
+    if (pathlib.Path('number.txt').exists()):
+        with open('number.txt', 'r') as totalsFile:
+            return totalsFile.read()
+    else:
+        return 0
+
 # Declares and starts the listener thread
 listener = threading.Thread(target=bot_listen)
 listener.daemon = True
@@ -87,8 +101,8 @@ listener.start()
 
 bot = Bot(token=telegramToken)
 
-oldNumber = 0
 while True:
+    oldNumber = int(ReadFromFile())
     # The updates are usually done at around 14:00, so we only poll around that time.
     if datetime.now().hour > 11 and datetime.now().hour < 16:
         number = getTotal()
@@ -97,6 +111,7 @@ while True:
             logging.info('Number changed!')
             bot.sendMessage(chat_id=chatid, text=f'Update: {number} positief getest')
             bot.setChatTitle(chat_id=chatid, title=f'Corona Updates Nederland - {number} positief getest')
+            writeToFile(number)
         else:
             logging.info('Number not changed')
     else:

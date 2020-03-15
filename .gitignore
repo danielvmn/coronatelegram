@@ -130,3 +130,6 @@ dmypy.json
 
 # nohup output
 nohup.out
+
+# Data store
+number.txt
