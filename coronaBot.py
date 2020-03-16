@@ -16,7 +16,8 @@ from telegram.ext import Updater, CommandHandler
 
 # Environment settings (Telegram chat id / API token)
 telegramToken = config('token')
-chatid = config('chat')
+mainGroupid = config('main_group')
+updateChats = config('chats', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Logging setup
 format = '%(asctime)-15s %(message)s'
@@ -33,7 +34,9 @@ def bot_listen():
 
     # Handler for '/total'
     total_handler = CommandHandler('total', total)
+    totaal_handler = CommandHandler('totaal', total)
     dispatcher.add_handler(total_handler)
+    dispatcher.add_handler(totaal_handler)
 
     # The handler will call the gemeente method if the /gemeente command is called
     gemeente_handler = CommandHandler('gemeente', gemeente)
@@ -70,7 +73,7 @@ def getGemeente(gemeente):
     for line in csvReader:
         if line and line[0].casefold() == gemeente.casefold():
             return f'{gemeente} heeft er {line[2]} positief getest'
-    return f'kan gemeente {gemeente} niet vinden'
+    return f'kan gemeente {gemeente} niet vinden of er zijn 0 positief getest.'
 
 # Scaps the total number of infected from RIVM
 def getTotal():
@@ -104,13 +107,15 @@ bot = Bot(token=telegramToken)
 while True:
     oldNumber = int(ReadFromFile())
     # The updates are usually done at around 14:00, so we only poll around that time.
-    if datetime.now().hour > 11 and datetime.now().hour < 16:
+    if datetime.now().hour > 10 and datetime.now().hour < 17:
         number = getTotal()
         if (number != oldNumber):
+            diff = int(number) - int(oldNumber)
             oldNumber = number
-            logging.info('Number changed!')
-            bot.sendMessage(chat_id=chatid, text=f'Update: {number} positief getest')
-            bot.setChatTitle(chat_id=chatid, title=f'Corona Updates Nederland - {number} positief getest')
+            logging.info(f'Number changed! New number: {number} (+{diff})')
+            bot.setChatTitle(chat_id=mainGroupid, title=f'Corona Updates Nederland - {number} positief getest')
+            for chat in updateChats:
+                bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{number-oldNumber})')
             writeToFile(number)
         else:
             logging.info('Number not changed')
