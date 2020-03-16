@@ -115,7 +115,7 @@ while True:
             logging.info(f'Number changed! New number: {number} (+{diff})')
             bot.setChatTitle(chat_id=mainGroupid, title=f'Corona Updates Nederland - {number} positief getest')
             for chat in updateChats:
-                bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{number-oldNumber})')
+                bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{diff})')
             writeToFile(number)
         else:
             logging.info('Number not changed')
