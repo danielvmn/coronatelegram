@@ -78,7 +78,7 @@ def getGemeente(gemeente):
     csvFile = StringIO(csvFromHtml)
     csvReader = csv.reader(csvFile, delimiter=';')
     for line in csvReader:
-        if line and line[0].casefold() == gemeente.casefold():
+        if line and line[1].casefold() == gemeente.casefold():
             return f'{gemeente} heeft er {line[2]} positief getest'
     return f'kan gemeente {gemeente} niet vinden of er zijn 0 positief getest.'
 
