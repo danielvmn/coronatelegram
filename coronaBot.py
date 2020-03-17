@@ -11,13 +11,14 @@ from io import StringIO
 from telegram import Bot
 from bs4 import BeautifulSoup
 from datetime import datetime
-from decouple import config
+from decouple import config, Csv
 from telegram.ext import Updater, CommandHandler
 
 # Environment settings (Telegram chat id / API token)
 telegramToken = config('token')
 mainGroupid = config('main_group')
-updateChats = config('chats', cast=lambda v: [s.strip() for s in v.split(',')])
+updateChats = config('chats', cast=Csv())
+disabledChats = config('disabled_chats', cast=Csv())
 
 # Logging setup
 format = '%(asctime)-15s %(message)s'
@@ -46,10 +47,16 @@ def bot_listen():
     updater.start_polling()
 
 def gemeente(update, context):
-    logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
-    # Extracts the string after '/gemeente' to retrieve the gemeente to search for
-    gemeente = update.message.text.replace('/gemeente','')
-    context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
+    if (str(update.effective_chat.id) not in disabledChats):
+        logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+        # Extracts the string after '/gemeente' to retrieve the gemeente to search for
+        gemeente = update.message.text.replace('/gemeente','')
+        if (gemeente):
+            context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
+        else:
+            context.bot.sendMessage(chat_id=update.effective_chat.id, text="Gebruik: /gemeente <naam>")
+    else:
+        logging.info(f'Skipping update to disbled group {update.effective_chat.title}')
 
 def help(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
