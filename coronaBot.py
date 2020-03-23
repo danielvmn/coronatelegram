@@ -47,16 +47,19 @@ def bot_listen():
     updater.start_polling()
 
 def gemeente(update, context):
-    if (str(update.effective_chat.id) not in disabledChats):
-        logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
-        # Extracts the string after '/gemeente' to retrieve the gemeente to search for
-        gemeente = update.message.text.replace('/gemeente','')
-        if (gemeente):
-            context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
+    try:
+        if (str(update.effective_chat.id) not in disabledChats):
+            logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+            # Extracts the string after '/gemeente' to retrieve the gemeente to search for
+            gemeente = update.message.text.replace('/gemeente','')
+            if (gemeente):
+                context.bot.sendMessage(chat_id=update.effective_chat.id, text=getGemeente(gemeente.strip()))
+            else:
+                context.bot.sendMessage(chat_id=update.effective_chat.id, text="Gebruik: /gemeente <naam>")
         else:
-            context.bot.sendMessage(chat_id=update.effective_chat.id, text="Gebruik: /gemeente <naam>")
-    else:
-        logging.info(f'Skipping update to disbled group {update.effective_chat.title}')
+            logging.info(f'Skipping update to disbled group {update.effective_chat.title}')
+    except Exception as e:
+        handleException(e)
 
 def help(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
@@ -65,13 +68,16 @@ def help(update, context):
         parse_mode = "Markdown")
 
 def total(update, context):
-    logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
-    totalText = f'Total positief getest: {getTotal()}'
-    context.bot.sendMessage(chat_id=update.effective_chat.id, text=totalText)
+    try:
+        logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+        totalText = f'Total positief getest: {getTotal()}'
+        context.bot.sendMessage(chat_id=update.effective_chat.id, text=totalText)
+    except Exception as e:
+        handleException(e)
 
 # Scraps the CSV data from RIVM
 def getGemeente(gemeente):
-    url='https://www.rivm.nl/coronavirus-kaart-van-nederland'
+    url='https://www.rivm.nl/corosnavirus-kaart-van-nederland'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     csvFromHtml = soup.find(id='csvData').string
@@ -97,12 +103,15 @@ def writeToFile(number):
         totalsFile.write(str(number))
 
 # Reads from the file to check if the number changed
-def ReadFromFile():
+def readFromFile():
     if (pathlib.Path('number.txt').exists()):
         with open('number.txt', 'r') as totalsFile:
             return totalsFile.read()
     else:
         return 0
+
+def handleException(e):
+    logging.error(e)
 
 # Declares and starts the listener thread
 listener = threading.Thread(target=bot_listen)
@@ -112,22 +121,25 @@ listener.start()
 bot = Bot(token=telegramToken)
 
 while True:
-    oldNumber = int(ReadFromFile())
+    oldNumber = int(readFromFile())
     # The updates are usually done at around 14:00, so we only poll around that time.
-    if datetime.now().hour > 10 and datetime.now().hour < 17:
-        number = getTotal()
-        if (number != oldNumber):
-            diff = int(number) - int(oldNumber)
-            oldNumber = number
-            logging.info(f'Number changed! New number: {number} (+{diff})')
-            bot.setChatTitle(chat_id=mainGroupid, title=f'Corona Updates Nederland - {number} positief getest')
-            for chat in updateChats:
-                bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{diff})')
-            writeToFile(number)
+    try:
+        if datetime.now().hour > 10 and datetime.now().hour < 17:
+            number = getTotal()
+            if (number != oldNumber):
+                diff = int(number) - int(oldNumber)
+                oldNumber = number
+                logging.info(f'Number changed! New number: {number} (+{diff})')
+                bot.setChatTitle(chat_id=mainGroupid, title=f'Corona Updates Nederland - {number} positief getest')
+                for chat in updateChats:
+                    bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{diff})')
+                writeToFile(number)
+            else:
+                logging.info('Number not changed')
         else:
-            logging.info('Number not changed')
-    else:
-        logging.info('Will only run between 11h and 16h')
+            logging.info('Will only run between 11h and 16h')
+    except Exception as e:
+        handleException(e)
 
     # We don't need to look for new data every moment, so it will poll every 60 seconds
     time.sleep(60)
