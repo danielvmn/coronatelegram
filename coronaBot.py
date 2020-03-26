@@ -7,7 +7,10 @@ import logging
 import threading
 import csv
 import pathlib
+import copy
+import pandas as pd
 from io import StringIO
+from io import BytesIO
 from telegram import Bot
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -43,6 +46,10 @@ def bot_listen():
     gemeente_handler = CommandHandler('gemeente', gemeente)
     dispatcher.add_handler(gemeente_handler)
 
+    # Handler for '/graph'
+    graph_handler = CommandHandler('graph', graph)
+    dispatcher.add_handler(graph_handler)
+
     # Starts polling for commands
     updater.start_polling()
 
@@ -61,6 +68,28 @@ def gemeente(update, context):
     except Exception as e:
         handleException(e)
 
+def graph(update, context):
+    try:
+        if (str(update.effective_chat.id) not in disabledChats):
+            logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
+            # Extracts the string after '/gemeente' to retrieve the gemeente to search for
+            gemeente = update.message.text.replace('/graph','')
+            gemeente = gemeente.strip().capitalize()
+            if (gemeente):
+                buffer = BytesIO()
+                buffer.name = 'graph.png'
+                getGraph(gemeente).savefig(buffer, format='png')
+                buffer.seek(0)
+                context.bot.send_photo(chat_id=update.effective_chat.id, photo=buffer)
+                buffer.close()
+            else:
+                context.bot.sendMessage(chat_id=update.effective_chat.id, text='Gebruik: /graph <naam>')
+        else:
+            logging.info(f'Skipping update to disbled group {update.effective_chat.title}')
+    except Exception as e:
+        context.bot.sendMessage(chat_id=update.effective_chat.id, text=f'kan gemeente {gemeente} niet vinden')
+        handleException(e)
+
 def help(update, context):
     logging.info(f'Replying command "{update.message.text}" from {update.effective_user.first_name}.')
     context.bot.sendMessage(chat_id=update.effective_chat.id,
@@ -77,7 +106,7 @@ def total(update, context):
 
 # Scraps the CSV data from RIVM
 def getGemeente(gemeente):
-    url='https://www.rivm.nl/corosnavirus-kaart-van-nederland'
+    url='https://www.rivm.nl/coronavirus-kaart-van-nederland-per-gemeente'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     csvFromHtml = soup.find(id='csvData').string
@@ -96,6 +125,18 @@ def getTotal():
     allH2 = soup.findAll('td')[1]
     pattern = r'\d+'
     return int(re.findall(pattern,str(allH2))[1])
+
+def getGraph(gemeente):
+    url = 'https://raw.githubusercontent.com/J535D165/CoronaWatchNL/master/data/rivm_corona_in_nl_table.csv'
+    responseHistory = requests.get(url).text
+    csvHistory = StringIO(responseHistory)
+    df = pd.read_csv(csvHistory, index_col = 'Gemeentenaam',usecols = lambda column : column not in ['Gemeentecode', 'Provincienaam'])
+    dfGemeente = df.loc[gemeente].iloc[::-1]
+    dfGemeente.columns = ['Date', 'Total']
+    plot = dfGemeente.plot.barh(x='Date', y='Total')
+    fig = plot.get_figure()
+    return fig
+
 
 # Saves current totals to a file
 def writeToFile(number):
