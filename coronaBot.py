@@ -119,12 +119,20 @@ def getGemeente(gemeente):
 
 # Scaps the total number of infected from RIVM
 def getTotal():
+    url = 'https://www.rivm.nl/coronavirus-kaart-van-nederland-per-gemeente'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    allH2 = soup.findAll('h2')[0]
+    pattern = r'\d+'
+    return int(re.findall(pattern,(str(allH2)).replace('.',''))[1])
+
+def getLatestNews():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    allH2 = soup.findAll('td')[1]
-    pattern = r'\d+'
-    return int(re.findall(pattern,str(allH2))[1])
+    aantal = soup.findAll(text=re.compile('Het totaal aantal'))
+    fullMessage = f'{aantal[0]}\n{aantal[1]}\n{aantal[2]}'
+    return fullMessage
 
 def getGraph(gemeente):
     url = 'https://raw.githubusercontent.com/J535D165/CoronaWatchNL/master/data/rivm_corona_in_nl_table.csv'
@@ -173,7 +181,7 @@ while True:
                 logging.info(f'Number changed! New number: {number} (+{diff})')
                 bot.setChatTitle(chat_id=mainGroupid, title=f'Corona Updates Nederland - {number} positief getest')
                 for chat in updateChats:
-                    bot.sendMessage(chat_id=chat, text=f'Update: {number} positief getest (+{diff})')
+                    bot.sendMessage(chat_id=chat, text=getLatestNews())
                 writeToFile(number)
             else:
                 logging.info('Number not changed')
