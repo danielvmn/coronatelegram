@@ -119,12 +119,11 @@ def getGemeente(gemeente):
 
 # Scaps the total number of infected from RIVM
 def getTotal():
-    url = 'https://www.rivm.nl/coronavirus-kaart-van-nederland-per-gemeente'
+    url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    allH2 = soup.findAll('h2')[0]
-    pattern = r'\d+'
-    return int(re.findall(pattern,(str(allH2)).replace('.',''))[1])
+    number = soup.table.tbody.tr.findAll(text=re.compile(r'\d+'))[0]
+    return int(number.replace('.',''))
 
 def getLatestNews():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
