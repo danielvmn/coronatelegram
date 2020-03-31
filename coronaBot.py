@@ -114,16 +114,16 @@ def getGemeente(gemeente):
     csvReader = csv.reader(csvFile, delimiter=';')
     for line in csvReader:
         if line and line[1].casefold() == gemeente.casefold():
-            return f'{gemeente} heeft er {line[2]} positief getest'
-    return f'kan gemeente {gemeente} niet vinden of er zijn 0 positief getest.'
+            return f'{gemeente} heeft {line[2]} opgenomen in het ziekenhuis'
+    return f'kan gemeente {gemeente} niet vinden of er zijn 0 opgenomen in het ziekenhuis.'
 
 # Scaps the total number of infected from RIVM
 def getTotal():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    number = soup.table.tbody.tr.findAll(text=re.compile(r'\d+'))[0]
-    return int(number.replace('.',''))
+    total = soup.findAll(text=re.compile(r'Het totaal'))[0]
+    return int(re.findall(r'\d+',total)[0])
 
 def getLatestNews():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
