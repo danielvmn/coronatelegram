@@ -122,8 +122,8 @@ def getTotal():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    total = soup.findAll(text=re.compile(r'Het totaal'))[0]
-    return int(re.findall(r'\d+',total)[0])
+    total = soup.h4.contents[0].replace('.','').replace('*','')
+    return int(total)
 
 def getLatestNews():
     url = 'https://www.rivm.nl/nieuws/actuele-informatie-over-coronavirus'
